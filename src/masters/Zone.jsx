@@ -1,8 +1,9 @@
-import { Button, Input, Table } from "antd";
+import { Input, Table } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
+import { EditFilled, DeleteFilled } from "@ant-design/icons";
 
 const Zone = () => {
   const [zone, setZone] = useState([]);
@@ -20,7 +21,7 @@ const Zone = () => {
   const fetchAll = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/api/v1/admin/zone/"
+        `http://localhost:3000/api/v1/admin/zone/?name=$`
       );
       setZone(response.data);
     } catch (error) {
@@ -50,13 +51,13 @@ const Zone = () => {
   const handleEdit = (record) => {
     setEditZoneId(record.zone_id); // Set the zone id being edited
     setNewZoneDesc(record.zone_name);
-    setShowErr(""); // Populate the input field with the description
+    setShowErr("");
   };
 
   //updating the value of desc
   const handleUpdate = async (e) => {
     e.preventDefault();
-    const isValid = /^[a-zA-z]+([\s][a-zA-Z]+)*$/.test(newZoneDesc);
+    const isValid = /^[a-zA-Z0-9\s()_]+$/.test(newZoneDesc);
     if (!isValid) {
       setShowErr("Zone description is not valid. only alphabets allowed");
       return;
@@ -99,13 +100,13 @@ const Zone = () => {
       });
 
       if (result.isConfirmed) {
-        await Swal.fire("Deleted!", "Your file has been deleted.", "success");
+        await Swal.fire("Deleted!", "Your zone has been deleted.", "success");
         await axios.delete(
           `http://localhost:3000/api/v1/admin/zone/${record.zone_id}`
         );
         fetchAll();
       } else if (result.dismiss === Swal.DismissReason.cancel) {
-        await Swal.fire("Cancelled", "Your imaginary file is safe :)", "error");
+        await Swal.fire("Cancelled", "Your zone entry is safe :)", "error");
       }
 
       setShowErr("");
@@ -116,49 +117,76 @@ const Zone = () => {
 
   const columns = [
     {
-      title: "Zone_Id",
+      title: "S.No",
       dataIndex: "zone_id",
       key: "zone_id",
+      width: "20%",
+      align: "center",
+      className: "zone-id-column",
+      render: (_, __, index) => index + 1,
     },
     {
-      title: "Zone_name",
+      title: "Zone name",
       dataIndex: "zone_name",
       key: "zone_name",
+      // width: "0%",
+      align: "center",
     },
     {
-      title: "Mode",
-      dataIndex: "mode",
-      key: "mode",
+      title: "Action",
+      dataIndex: "action",
+      align: "center",
+      key: "action",
+      width: "25%",
       render: (_, record) => (
-        <span>
-          <Button
+        <>
+          <EditFilled
             type="primary"
-            style={{ marginRight: "5px", backgroundColor: "green" }}
+            style={{
+              marginRight: "15px",
+              // backgroundColor: "#F4D03F",
+              textAlign: "center",
+            }}
             onClick={() => handleEdit(record)}
-          >
-            Edit
-          </Button>
-          <Button type="primary" danger onClick={() => handleDelete(record)}>
-            Delete
-          </Button>
-        </span>
+          />
+          <DeleteFilled type="primary" onClick={() => handleDelete(record)} />
+        </>
       ),
     },
   ];
 
   return (
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <div style={{ width: "50%", display: "flex", flexDirection: "column" }}>
-        <h2>Zone</h2>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        backgroundColor: "#EAEDED",
+      }}
+    >
+      <div
+        style={{
+          width: "50%",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <h2 style={{ textAlign: "center" }}>Zone label</h2>
         <form onSubmit={editZoneId !== null ? handleUpdate : handleFormSubmit}>
+          <Table
+            bordered
+            columns={columns}
+            dataSource={zone}
+            scroll={{
+              y: 300,
+            }}
+          />
+
           <Input
             type="text"
             value={newZoneDesc}
             onChange={(e) => {
               setNewZoneDesc(e.target.value);
-              const isValid = /^[a-zA-z]+([\s][a-zA-Z]+)*$/.test(
-                e.target.value
-              );
+              const isValid = /^[a-zA-Z0-9\s()_]+$/.test(e.target.value);
 
               isValid
                 ? setShowErr("")
@@ -172,7 +200,7 @@ const Zone = () => {
           <button
             type="submit"
             style={{
-              backgroundColor: "lightblue",
+              backgroundColor: "#52BE80",
               padding: "10px 20px",
               border: "none",
               borderRadius: "5px",
@@ -194,7 +222,6 @@ const Zone = () => {
                 backgroundColor: "orange",
                 padding: "10px 20px",
                 border: "none",
-                marginTop: "0px",
                 borderRadius: "5px",
                 cursor: "pointer",
                 fontSize: "15px",
@@ -205,9 +232,6 @@ const Zone = () => {
             </button>
           )}
         </form>
-        <div>
-          <Table bordered columns={columns} dataSource={zone} />
-        </div>
       </div>
     </div>
   );
