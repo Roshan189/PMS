@@ -1,4 +1,5 @@
 import { Input, Table } from "antd";
+const { Search } = Input;
 import axios from "axios";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
@@ -10,6 +11,7 @@ const Zone = () => {
   const [newZoneDesc, setNewZoneDesc] = useState("");
   const [showErr, setShowErr] = useState("");
   const [editZoneId, setEditZoneId] = useState(null); // State to track the zone being edited
+  const [search, setSearch] = useState("");
 
   const MySwal = withReactContent(Swal);
 
@@ -17,13 +19,24 @@ const Zone = () => {
     fetchAll();
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearch();
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [search]);
+
   //fetch all data/read
   const fetchAll = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/v1/admin/zone/?name=$`
+        `http://localhost:3000/api/v1/admin/zone/?name=${search}`
       );
-      setZone(response.data);
+      setZone(response.data.data);
+      console.log(response.data.pagination);
     } catch (error) {
       console.log(error);
     }
@@ -115,6 +128,20 @@ const Zone = () => {
     }
   };
 
+  // search functionality
+  const onSearch = async () => {
+    // const response = await axios.get(
+    //   `http://localhost:3000/api/v1/admin/zone/?name=${search}`
+    // );
+    console.log("search value", search);
+    await fetchAll();
+
+    // console.log(response.data.data);
+    // setSearch(response.data.data);
+  };
+
+  // const handleSearch = async () => { };
+
   const columns = [
     {
       title: "S.No",
@@ -122,7 +149,6 @@ const Zone = () => {
       key: "zone_id",
       width: "20%",
       align: "center",
-      className: "zone-id-column",
       render: (_, __, index) => index + 1,
     },
     {
@@ -144,12 +170,16 @@ const Zone = () => {
             type="primary"
             style={{
               marginRight: "15px",
-              // backgroundColor: "#F4D03F",
+              color: "green",
               textAlign: "center",
             }}
             onClick={() => handleEdit(record)}
           />
-          <DeleteFilled type="primary" onClick={() => handleDelete(record)} />
+          <DeleteFilled
+            type="primary"
+            style={{ color: "red" }}
+            onClick={() => handleDelete(record)}
+          />
         </>
       ),
     },
@@ -168,69 +198,95 @@ const Zone = () => {
           width: "50%",
           display: "flex",
           flexDirection: "column",
+          marginTop: "3%",
+          // border: "2px solid dotted",
         }}
       >
-        <h2 style={{ textAlign: "center" }}>Zone label</h2>
+        {/* <h2 style={{ textAlign: "center" }}>Zone label</h2> */}
+        <Search
+          placeholder="input search text"
+          onSearch={onSearch}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          enterButton
+          style={{ width: "40%", marginLeft: "60%", marginBottom: "2%" }}
+        />
+
+        {/* <GenSearch /> */}
+
         <form onSubmit={editZoneId !== null ? handleUpdate : handleFormSubmit}>
           <Table
             bordered
             columns={columns}
             dataSource={zone}
-            scroll={{
-              y: 300,
-            }}
-          />
-
-          <Input
-            type="text"
-            value={newZoneDesc}
-            onChange={(e) => {
-              setNewZoneDesc(e.target.value);
-              const isValid = /^[a-zA-Z0-9\s()_]+$/.test(e.target.value);
-
-              isValid
-                ? setShowErr("")
-                : setShowErr(
-                    "Zone description is not valid. only alphabets allowed"
-                  );
-            }}
-            placeholder="Enter Zone Name"
-          />
-          <p style={{ color: "red" }}>{showErr}</p>
-          <button
-            type="submit"
+            size="small"
+            pagination={false}
             style={{
-              backgroundColor: "#52BE80",
-              padding: "10px 20px",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-              fontSize: "15px",
-              marginBottom: "20px",
-              marginRight: "10px",
+              marginBottom: "3%",
+            }}
+          />
+
+          <div style={{ width: "60%", marginLeft: "20%" }}>
+            <Input
+              type="text"
+              value={newZoneDesc}
+              onChange={(e) => {
+                setNewZoneDesc(e.target.value);
+                const isValid = /^[a-zA-Z0-9\s()_]+$/.test(e.target.value);
+
+                isValid
+                  ? setShowErr("")
+                  : setShowErr(
+                      "Zone description is not valid. only alphabets allowed"
+                    );
+              }}
+              placeholder="Enter Zone Name"
+            />
+            <p style={{ color: "red" }}>{showErr}</p>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
-            {editZoneId !== null ? "Update zone" : "Add zone"}
-          </button>
-          {editZoneId !== null && (
             <button
-              onClick={() => {
-                setEditZoneId(null);
-                setNewZoneDesc("");
-              }}
+              type="submit"
               style={{
-                backgroundColor: "orange",
-                padding: "10px 20px",
+                backgroundColor: "#52BE80",
+                padding: "7px 10px",
                 border: "none",
                 borderRadius: "5px",
                 cursor: "pointer",
                 fontSize: "15px",
                 marginBottom: "20px",
+                marginRight: "10px",
               }}
             >
-              Cancel
+              {editZoneId !== null ? "Update" : "Add zone"}
             </button>
-          )}
+            {editZoneId !== null && (
+              <button
+                onClick={() => {
+                  setEditZoneId(null);
+                  setNewZoneDesc("");
+                }}
+                style={{
+                  backgroundColor: "orange",
+                  padding: "7px 10px",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  fontSize: "15px",
+                  marginBottom: "20px",
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>
