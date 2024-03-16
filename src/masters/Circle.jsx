@@ -22,6 +22,7 @@ const Circle = () => {
   });
   const [cascaderOptions, setCascaderOptions] = useState([]);
   const [zoneId, setZoneId] = useState("");
+  const [zoneName, setZoneName] = useState("");
 
   const MySwal = withReactContent(Swal);
 
@@ -31,7 +32,7 @@ const Circle = () => {
 
   useEffect(() => {
     fetchAll();
-  }, [pagination.currentPage, pagination.pageSize]);
+  }, [pagination.currentPage, pagination.pageSize, zoneName]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -47,7 +48,7 @@ const Circle = () => {
   const fetchAll = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/v1/admin/circle/?name=${search}&page=${pagination.currentPage}&pageSize=${pagination.pageSize}&zoneNameFilter=delhi`
+        `http://localhost:3000/api/v1/admin/circle/?name=${search}&page=${pagination.currentPage}&pageSize=${pagination.pageSize}&zoneNameFilter=${zoneName}`
       );
       setcircle(response.data.data);
       // console.log(response.data);
@@ -216,8 +217,10 @@ const Circle = () => {
   };
 
   //dropdown
-  const onChange = (value) => {
-    console.log(value);
+  const onChange = (value, zone) => {
+    console.log("value", value);
+    console.log("zone", zone);
+    setZoneName(zone[0].label);
   };
 
   const columns = [
@@ -236,13 +239,7 @@ const Circle = () => {
       // width: "0%",
       align: "center",
     },
-    {
-      title: "  Zone name",
-      dataIndex: "zone.zone_name",
-      key: "zone.zone_name",
-      // width: "0%",
-      align: "center",
-    },
+
     {
       title: "Action",
       dataIndex: "action",
@@ -301,6 +298,12 @@ const Circle = () => {
         <form
           onSubmit={editcircleId !== null ? handleUpdate : handleFormSubmit}
         >
+          <Cascader
+            placeholder="select zone"
+            onChange={onChange}
+            options={cascaderOptions}
+          />
+
           <Table
             bordered
             columns={columns}
@@ -310,6 +313,7 @@ const Circle = () => {
             style={{
               marginBottom: "3%",
             }}
+            rowKey={() => crypto.randomUUID()}
           />
           <Pagination
             current={pagination.currentPage}
@@ -323,13 +327,6 @@ const Circle = () => {
             showSizeChanger={true}
             onPrev={() => handlePageChange(pagination.prevPage)}
             onNext={() => handlePageChange(pagination.nextPage)}
-          />
-
-          {/* dropdown */}
-          <Cascader
-            options={cascaderOptions}
-            onChange={onChange}
-            placeholder="Please select"
           />
 
           <div style={{ width: "60%", marginLeft: "20%" }}>
