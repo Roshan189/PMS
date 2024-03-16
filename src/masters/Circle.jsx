@@ -21,18 +21,17 @@ const Circle = () => {
     prevPage: null,
   });
   const [cascaderOptions, setCascaderOptions] = useState([]);
+  // const [CascaderOptionsBottom, setCascaderOptionsBottom] = useState([]);
   const [zoneId, setZoneId] = useState("");
+  //for dropdown
   const [zoneName, setZoneName] = useState("");
+  // const [zoneName1, setZoneName2] = useState("");
 
   const MySwal = withReactContent(Swal);
 
   useEffect(() => {
     fetchAll();
-  }, []);
-
-  useEffect(() => {
-    fetchAll();
-  }, [pagination.currentPage, pagination.pageSize, zoneName]);
+  }, [zoneName, pagination.currentPage, pagination.pageSize]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -50,7 +49,9 @@ const Circle = () => {
       const response = await axios.get(
         `http://localhost:3000/api/v1/admin/circle/?name=${search}&page=${pagination.currentPage}&pageSize=${pagination.pageSize}&zoneNameFilter=${zoneName}`
       );
+
       setcircle(response.data.data);
+      setZoneId(zoneName);
       // console.log(response.data);
       const {
         totalRecords,
@@ -85,7 +86,7 @@ const Circle = () => {
         const response = await axios.get(
           `http://localhost:3000/api/v1/admin/zone/?name=${search}`
         );
-        console.log(response.data);
+        // console.log(response.data);
         const formattedData = response.data.data.map((z) => ({
           value: z["zone_id"],
           label: z["zone_name"],
@@ -101,7 +102,6 @@ const Circle = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    setZoneId();
     try {
       const response = await axios.post(
         "http://localhost:3000/api/v1/admin/circle/",
@@ -112,6 +112,7 @@ const Circle = () => {
       );
       setcircle([response.data]);
       setNewcircleDesc("");
+      setZoneId();
 
       fetchAll();
     } catch (error) {
@@ -218,8 +219,8 @@ const Circle = () => {
 
   //dropdown
   const onChange = (value, zone) => {
-    console.log("value", value);
-    console.log("zone", zone);
+    // console.log("value", value);
+    console.log("zone", zone[0].label);
     setZoneName(zone[0].label);
   };
 
@@ -281,7 +282,6 @@ const Circle = () => {
           display: "flex",
           flexDirection: "column",
           marginTop: "3%",
-          // border: "2px solid dotted",
         }}
       >
         {/* <h2 style={{ textAlign: "center" }}>Circle label</h2> */}
@@ -298,6 +298,7 @@ const Circle = () => {
         <form
           onSubmit={editcircleId !== null ? handleUpdate : handleFormSubmit}
         >
+          {/* cascader */}
           <Cascader
             placeholder="select zone"
             onChange={onChange}
@@ -308,7 +309,6 @@ const Circle = () => {
             bordered
             columns={columns}
             dataSource={circle}
-            size="small"
             pagination={false}
             style={{
               marginBottom: "3%",
@@ -327,6 +327,16 @@ const Circle = () => {
             showSizeChanger={true}
             onPrev={() => handlePageChange(pagination.prevPage)}
             onNext={() => handlePageChange(pagination.nextPage)}
+          />
+
+          {/* cascader */}
+          <Cascader
+            placeholder="select zone"
+            onChange={onChange}
+            options={cascaderOptions}
+            value={zoneId}
+            defaultValue={zoneId}
+            // disabled
           />
 
           <div style={{ width: "60%", marginLeft: "20%" }}>
