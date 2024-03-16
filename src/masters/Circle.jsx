@@ -1,14 +1,27 @@
-import { Button, Input, Table } from "antd";
+import { Input, Pagination, Table, Cascader } from "antd";
+const { Search } = Input;
 import axios from "axios";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
+import { EditFilled, DeleteFilled } from "@ant-design/icons";
 
 const Circle = () => {
-  const [zone, setZone] = useState([]);
-  const [newZoneDesc, setNewZoneDesc] = useState("");
+  const [circle, setcircle] = useState([]);
+  const [newcircleDesc, setNewcircleDesc] = useState("");
   const [showErr, setShowErr] = useState("");
-  const [editZoneId, setEditZoneId] = useState(null); // State to track the zone being edited
+  const [editcircleId, setEditcircleId] = useState(null); // State to track the circle being edited
+  const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState({
+    totalRecords: 0,
+    pageSize: 10,
+    totalPages: 0,
+    currentPage: 1,
+    nextPage: null,
+    prevPage: null,
+  });
+  const [cascaderOptions, setCascaderOptions] = useState([]);
+  const [zoneId, setZoneId] = useState("");
 
   const MySwal = withReactContent(Swal);
 
@@ -16,29 +29,89 @@ const Circle = () => {
     fetchAll();
   }, []);
 
+  useEffect(() => {
+    fetchAll();
+  }, [pagination.currentPage, pagination.pageSize]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearch();
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [search]);
+
   //fetch all data/read
   const fetchAll = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/api/v1/admin/zone/"
+        `http://localhost:3000/api/v1/admin/circle/?name=${search}&page=${pagination.currentPage}&pageSize=${pagination.pageSize}&zoneNameFilter=delhi`
       );
-      setZone(response.data);
+      setcircle(response.data.data);
+      // console.log(response.data);
+      const {
+        totalRecords,
+        totalPages,
+        currentPage,
+        nextPage,
+        prevPage,
+        pageSize,
+      } = response.data.pagination;
+
+      const { data } = response.data;
+      setcircle(data);
+      setPagination((prevState) => ({
+        ...prevState,
+        totalRecords: totalRecords,
+        totalPages: totalPages,
+        pageSize: pageSize,
+        currentPage: currentPage,
+        nextPage: nextPage,
+        prevPage: prevPage,
+      }));
     } catch (error) {
       console.log(error);
     }
   };
 
+  // Fetch cascader data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch data from API using Axios and async/await
+        const response = await axios.get(
+          `http://localhost:3000/api/v1/admin/zone/?name=${search}`
+        );
+        console.log(response.data);
+        const formattedData = response.data.data.map((z) => ({
+          value: z["zone_id"],
+          label: z["zone_name"],
+        }));
+        setCascaderOptions(formattedData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    setZoneId();
     try {
       const response = await axios.post(
-        "http://localhost:3000/api/v1/admin/zone/",
+        "http://localhost:3000/api/v1/admin/circle/",
         {
-          zone_name: newZoneDesc,
+          fk_zone_id: zoneId,
+          circle_name: newcircleDesc,
         }
       );
-      setZone([response.data]);
-      setNewZoneDesc("");
+      setcircle([response.data]);
+      setNewcircleDesc("");
+
       fetchAll();
     } catch (error) {
       console.log(error);
@@ -48,30 +121,30 @@ const Circle = () => {
 
   //extracting id for edit
   const handleEdit = (record) => {
-    setEditZoneId(record.zone_id); // Set the zone id being edited
-    setNewZoneDesc(record.zone_name);
-    setShowErr(""); // Populate the input field with the description
+    setEditcircleId(record.circle_id); // Set the circle id being edited
+    setNewcircleDesc(record.circle_name);
+    setShowErr("");
   };
 
   //updating the value of desc
   const handleUpdate = async (e) => {
     e.preventDefault();
-    const isValid = /^[a-zA-z]+([\s][a-zA-Z]+)*$/.test(newZoneDesc);
+    const isValid = /^[a-zA-Z0-9\s()_]+$/.test(newcircleDesc);
     if (!isValid) {
       setShowErr("Circle description is not valid. only alphabets allowed");
       return;
     }
     try {
       await axios.patch(
-        `http://localhost:3000/api/v1/admin/zone/${editZoneId}`,
+        `http://localhost:3000/api/v1/admin/circle/${editcircleId}`,
         {
-          zone_name: newZoneDesc,
+          circle_name: newcircleDesc,
         }
       );
-      // Refresh the zone list after update
+      // Refresh the circle list after update
       fetchAll();
-      setNewZoneDesc(""); // Clear the input field after editing
-      setEditZoneId(null); // Reset edit zone id
+      setNewcircleDesc(""); // Clear the input field after editing
+      setEditcircleId(null); // Reset edit circle id
       setShowErr("");
     } catch (error) {
       console.log(error);
@@ -99,13 +172,14 @@ const Circle = () => {
       });
 
       if (result.isConfirmed) {
-        await Swal.fire("Deleted!", "Your file has been deleted.", "success");
+        await Swal.fire("Deleted!", "Your circle has been deleted.", "success");
+        console.log("circle id", record.circle_id);
         await axios.delete(
-          `http://localhost:3000/api/v1/admin/zone/${record.zone_id}`
+          `http://localhost:3000/api/v1/admin/circle/${record.circle_id}`
         );
         fetchAll();
       } else if (result.dismiss === Swal.DismissReason.cancel) {
-        await Swal.fire("Cancelled", "Your imaginary file is safe :)", "error");
+        await Swal.fire("Cancelled", "Your circle entry is safe :)", "error");
       }
 
       setShowErr("");
@@ -114,100 +188,211 @@ const Circle = () => {
     }
   };
 
+  // search functionality
+  const onSearch = async () => {
+    // const response = await axios.get(
+    //   `http://localhost:3000/api/v1/admin/circle/?name=${search}`
+    // );
+    console.log("search value", search);
+    await fetchAll();
+
+    // console.log(response.data.data);
+    // setSearch(response.data.data);
+  };
+
+  //Pagination
+  const handlePageChange = (page) => {
+    setPagination((prevState) => ({
+      ...prevState,
+      currentPage: page,
+    }));
+  };
+
+  const pageSizeChange = (current, pageSize) => {
+    setPagination((prevState) => ({
+      ...prevState,
+      pageSize: pageSize,
+    }));
+  };
+
+  //dropdown
+  const onChange = (value) => {
+    console.log(value);
+  };
+
   const columns = [
     {
-      title: "Circle_Id",
+      title: "S.No",
       dataIndex: "circle_id",
       key: "circle_id",
+      width: "20%",
+      align: "center",
+      render: (_, __, index) => index + 1,
     },
     {
-      title: "Circle_name",
+      title: "Circle name",
       dataIndex: "circle_name",
       key: "circle_name",
+      // width: "0%",
+      align: "center",
     },
     {
-      title: "Mode",
-      dataIndex: "mode",
-      key: "mode",
+      title: "  Zone name",
+      dataIndex: "zone.zone_name",
+      key: "zone.zone_name",
+      // width: "0%",
+      align: "center",
+    },
+    {
+      title: "Action",
+      dataIndex: "action",
+      align: "center",
+      key: "action",
+      width: "25%",
       render: (_, record) => (
-        <span>
-          <Button
+        <>
+          <EditFilled
             type="primary"
-            style={{ marginRight: "5px", backgroundColor: "green" }}
+            style={{
+              marginRight: "15px",
+              color: "green",
+              textAlign: "center",
+            }}
             onClick={() => handleEdit(record)}
-          >
-            Edit
-          </Button>
-          <Button type="primary" danger onClick={() => handleDelete(record)}>
-            Delete
-          </Button>
-        </span>
+          />
+          <DeleteFilled
+            type="primary"
+            style={{ color: "red" }}
+            onClick={() => handleDelete(record)}
+          />
+        </>
       ),
     },
   ];
 
   return (
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <div style={{ width: "50%", display: "flex", flexDirection: "column" }}>
-        <h2>Circle</h2>
-        <form onSubmit={editZoneId !== null ? handleUpdate : handleFormSubmit}>
-          <Input
-            type="text"
-            value={newZoneDesc}
-            onChange={(e) => {
-              setNewZoneDesc(e.target.value);
-              const isValid = /^[a-zA-z]+([\s][a-zA-Z]+)*$/.test(
-                e.target.value
-              );
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        backgroundColor: "#EAEDED",
+      }}
+    >
+      <div
+        style={{
+          width: "50%",
+          display: "flex",
+          flexDirection: "column",
+          marginTop: "3%",
+          // border: "2px solid dotted",
+        }}
+      >
+        {/* <h2 style={{ textAlign: "center" }}>Circle label</h2> */}
 
-              isValid
-                ? setShowErr("")
-                : setShowErr(
-                    "Circle description is not valid. only alphabets allowed"
-                  );
-            }}
-            placeholder="Enter Circle Name"
-          />
-          <p style={{ color: "red" }}>{showErr}</p>
-          <button
-            type="submit"
+        <Search
+          placeholder="input search text"
+          onSearch={onSearch}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          enterButton
+          style={{ width: "40%", marginLeft: "60%", marginBottom: "2%" }}
+        />
+        {/* <GenSearch /> */}
+        <form
+          onSubmit={editcircleId !== null ? handleUpdate : handleFormSubmit}
+        >
+          <Table
+            bordered
+            columns={columns}
+            dataSource={circle}
+            size="small"
+            pagination={false}
             style={{
-              backgroundColor: "lightblue",
-              padding: "10px 20px",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-              fontSize: "15px",
-              marginBottom: "20px",
-              marginRight: "10px",
+              marginBottom: "3%",
+            }}
+          />
+          <Pagination
+            current={pagination.currentPage}
+            total={pagination.totalRecords}
+            pageSize={pagination.pageSize}
+            onChange={handlePageChange}
+            showLessItems={true}
+            onShowSizeChange={pageSizeChange}
+            showQuickJumper={false}
+            showPrevNextJumpers={true}
+            showSizeChanger={true}
+            onPrev={() => handlePageChange(pagination.prevPage)}
+            onNext={() => handlePageChange(pagination.nextPage)}
+          />
+
+          {/* dropdown */}
+          <Cascader
+            options={cascaderOptions}
+            onChange={onChange}
+            placeholder="Please select"
+          />
+
+          <div style={{ width: "60%", marginLeft: "20%" }}>
+            <Input
+              type="text"
+              value={newcircleDesc}
+              onChange={(e) => {
+                setNewcircleDesc(e.target.value);
+                const isValid = /^[a-zA-Z0-9\s()_]+$/.test(e.target.value);
+
+                isValid
+                  ? setShowErr("")
+                  : setShowErr(
+                      "Circle description is not valid. only alphabets allowed"
+                    );
+              }}
+              placeholder="Enter Circle Name"
+            />
+            <p style={{ color: "red" }}>{showErr}</p>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
-            {editZoneId !== null ? "Update circle" : "Add circle"}
-          </button>
-          {editZoneId !== null && (
             <button
-              onClick={() => {
-                setEditZoneId(null);
-                setNewZoneDesc("");
-              }}
+              type="submit"
               style={{
-                backgroundColor: "orange",
-                padding: "10px 20px",
+                backgroundColor: "#52BE80",
+                padding: "7px 10px",
                 border: "none",
-                marginTop: "0px",
                 borderRadius: "5px",
                 cursor: "pointer",
                 fontSize: "15px",
                 marginBottom: "20px",
+                marginRight: "10px",
               }}
             >
-              Cancel
+              {editcircleId !== null ? "Update" : "Add circle"}
             </button>
-          )}
+            {editcircleId !== null && (
+              <button
+                onClick={() => {
+                  setEditcircleId(null);
+                  setNewcircleDesc("");
+                }}
+                style={{
+                  backgroundColor: "orange",
+                  padding: "7px 10px",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  fontSize: "15px",
+                  marginBottom: "20px",
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
-        <div>
-          <Table bordered columns={columns} dataSource={zone} />
-        </div>
       </div>
     </div>
   );

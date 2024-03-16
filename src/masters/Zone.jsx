@@ -1,4 +1,4 @@
-import { Input, Table } from "antd";
+import { Input, Pagination, Table } from "antd";
 const { Search } = Input;
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -12,12 +12,24 @@ const Zone = () => {
   const [showErr, setShowErr] = useState("");
   const [editZoneId, setEditZoneId] = useState(null); // State to track the zone being edited
   const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState({
+    totalRecords: 0,
+    pageSize: 10,
+    totalPages: 0,
+    currentPage: 1,
+    nextPage: null,
+    prevPage: null,
+  });
 
   const MySwal = withReactContent(Swal);
 
   useEffect(() => {
     fetchAll();
   }, []);
+
+  useEffect(() => {
+    fetchAll();
+  }, [pagination.currentPage, pagination.pageSize]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -33,10 +45,30 @@ const Zone = () => {
   const fetchAll = async () => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/v1/admin/zone/?name=${search}`
+        `http://localhost:3000/api/v1/admin/zone/?name=${search}&page=${pagination.currentPage}&pageSize=${pagination.pageSize}`
       );
       setZone(response.data.data);
-      console.log(response.data.pagination);
+      console.log(response.data);
+      const {
+        totalRecords,
+        totalPages,
+        currentPage,
+        nextPage,
+        prevPage,
+        pageSize,
+      } = response.data.pagination;
+
+      const { data } = response.data;
+      setZone(data);
+      setPagination((prevState) => ({
+        ...prevState,
+        totalRecords: totalRecords,
+        totalPages: totalPages,
+        pageSize: pageSize,
+        currentPage: currentPage,
+        nextPage: nextPage,
+        prevPage: prevPage,
+      }));
     } catch (error) {
       console.log(error);
     }
@@ -114,6 +146,7 @@ const Zone = () => {
 
       if (result.isConfirmed) {
         await Swal.fire("Deleted!", "Your zone has been deleted.", "success");
+        console.log("zone id", record.zone_id);
         await axios.delete(
           `http://localhost:3000/api/v1/admin/zone/${record.zone_id}`
         );
@@ -140,7 +173,20 @@ const Zone = () => {
     // setSearch(response.data.data);
   };
 
-  // const handleSearch = async () => { };
+  //Pagination
+  const handlePageChange = (page) => {
+    setPagination((prevState) => ({
+      ...prevState,
+      currentPage: page,
+    }));
+  };
+
+  const pageSizeChange = (current, pageSize) => {
+    setPagination((prevState) => ({
+      ...prevState,
+      pageSize: pageSize,
+    }));
+  };
 
   const columns = [
     {
@@ -202,7 +248,7 @@ const Zone = () => {
           // border: "2px solid dotted",
         }}
       >
-        {/* <h2 style={{ textAlign: "center" }}>Zone label</h2> */}
+        <h2 style={{ textAlign: "center" }}>Zone</h2>
         <Search
           placeholder="input search text"
           onSearch={onSearch}
@@ -219,14 +265,30 @@ const Zone = () => {
             bordered
             columns={columns}
             dataSource={zone}
-            size="small"
+            // size="medium"
             pagination={false}
             style={{
               marginBottom: "3%",
             }}
           />
+          <Pagination
+            current={pagination.currentPage}
+            total={pagination.totalRecords}
+            pageSize={pagination.pageSize}
+            onChange={handlePageChange}
+            showLessItems={true}
+            onShowSizeChange={pageSizeChange}
+            showQuickJumper={false}
+            showPrevNextJumpers={true}
+            showSizeChanger={true}
+            onPrev={() => handlePageChange(pagination.prevPage)}
+            onNext={() => handlePageChange(pagination.nextPage)}
+            style={{
+              marginBottom: "2%",
+            }}
+          />
 
-          <div style={{ width: "60%", marginLeft: "20%" }}>
+          <div style={{ width: "40%", marginLeft: "30%" }}>
             <Input
               type="text"
               value={newZoneDesc}
@@ -244,7 +306,6 @@ const Zone = () => {
             />
             <p style={{ color: "red" }}>{showErr}</p>
           </div>
-
           <div
             style={{
               display: "flex",
