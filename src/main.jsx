@@ -17,11 +17,13 @@ import NotFound from "./masters/NotFound.jsx";
 import Login from "./reports/Login.jsx";
 import History from "./reports/History.jsx";
 import AuditTrail from "./reports/AuditTrail.jsx";
+import LayoutWrapper from "./component/LayoutWrapper.jsx";
+
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App />,
+    element: <LayoutWrapper />,
     errorElement: <NotFound />,
     children: [
       {
